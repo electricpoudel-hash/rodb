@@ -1,0 +1,835 @@
+// API Base URL
+const API_BASE = '/api';
+
+// State
+let authToken = null;
+let currentUser = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    initKeyboardShortcut();
+});
+
+// Keyboard shortcut (Ctrl+Alt+A)
+function initKeyboardShortcut() {
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.altKey && e.key === 'a') {
+            e.preventDefault();
+            if (!authToken) {
+                document.getElementById('username').focus();
+            }
+        }
+    });
+}
+
+// Check authentication
+function checkAuth() {
+    authToken = localStorage.getItem('authToken');
+
+    if (authToken) {
+        verifyToken();
+    } else {
+        showLogin();
+    }
+}
+
+// Verify token
+async function verifyToken() {
+    try {
+        const response = await fetch(`${API_BASE}/auth/me`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            currentUser = data.user;
+            showDashboard();
+        } else {
+            showLogin();
+        }
+    } catch (error) {
+        console.error('Token verification error:', error);
+        showLogin();
+    }
+}
+
+// Show login screen
+function showLogin() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('adminDashboard').style.display = 'none';
+
+    const loginForm = document.getElementById('loginForm');
+    loginForm.addEventListener('submit', handleLogin);
+}
+
+// Handle login
+async function handleLogin(e) {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const errorDiv = document.getElementById('loginError');
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            authToken = data.accessToken;
+            currentUser = data.user;
+            localStorage.setItem('authToken', authToken);
+            showDashboard();
+        } else {
+            errorDiv.textContent = data.error || 'Login failed';
+            errorDiv.classList.add('show');
+        }
+    } catch (error) {
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.classList.add('show');
+    }
+}
+
+// Show dashboard
+function showDashboard() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminDashboard').style.display = 'grid';
+
+    // Display user info
+    document.getElementById('userInfo').textContent = `Logged in as: ${currentUser.username}`;
+
+    // Initialize dashboard
+    initNavigation();
+    loadDashboardStats();
+    loadRecentArticles();
+    loadCategories();
+
+    // Logout button
+    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+}
+
+// Initialize navigation
+function initNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Update active nav item
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+
+            // Show corresponding section
+            const sectionName = item.dataset.section;
+            showSection(sectionName);
+        });
+    });
+}
+
+// Show section
+function showSection(sectionName) {
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+    });
+
+    // Show selected section
+    const section = document.getElementById(`section-${sectionName}`);
+    if (section) {
+        section.classList.add('active');
+    }
+
+    // Update page title
+    const titles = {
+        'dashboard': 'Dashboard',
+        'articles': 'All Articles',
+        'create-article': 'Create Article',
+        'categories': 'Categories',
+        'ticker': 'News Ticker',
+        'users': 'Users',
+        'settings': 'Settings',
+        'navigation': 'Navigation Management',
+        'ads': 'Ad Management'
+    };
+    document.getElementById('pageTitle').textContent = titles[sectionName] || 'Admin Panel';
+
+    // Load section data
+    switch (sectionName) {
+        case 'articles':
+            loadAllArticles();
+            break;
+        case 'create-article':
+            initCreateArticleForm();
+            break;
+        case 'categories':
+            loadCategories();
+            break;
+        case 'ticker':
+            loadTickerSettings();
+            break;
+        case 'users':
+            loadUsers();
+            break;
+        case 'settings':
+            loadSettings();
+            break;
+        case 'navigation':
+            loadNavigation();
+            break;
+        case 'ads':
+            loadAds();
+            break;
+    }
+}
+
+// Navigation Functions
+async function loadNavigation() {
+    try {
+        const response = await fetch(`${API_BASE}/navigation/all`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await response.json();
+        const list = document.getElementById('navigationList');
+
+        list.innerHTML = data.items.map(item => `
+            <div class="article-item" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>${item.label}</strong> <small>(${item.url})</small><br>
+                    <small>Order: ${item.display_order} | Enabled: ${item.is_enabled ? 'Yes' : 'No'}</small>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-danger" onclick="deleteNavItem(${item.id})">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function showAddNavForm() { document.getElementById('addNavForm').style.display = 'block'; }
+function hideAddNavForm() { document.getElementById('addNavForm').style.display = 'none'; }
+
+async function createNavItem() {
+    const label = document.getElementById('nav_label').value;
+    const url = document.getElementById('nav_url').value;
+    const order = document.getElementById('nav_order').value;
+
+    await fetch(`${API_BASE}/navigation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ label, url, display_order: parseInt(order) })
+    });
+    hideAddNavForm();
+    loadNavigation();
+}
+
+async function deleteNavItem(id) {
+    if (!confirm('Delete this item?')) return;
+    await fetch(`${API_BASE}/navigation/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+    loadNavigation();
+}
+
+// Ads Functions
+async function loadAds() {
+    try {
+        const response = await fetch(`${API_BASE}/ads/all`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const data = await response.json();
+        const list = document.getElementById('adsList');
+
+        list.innerHTML = data.ads.map(ad => `
+            <div class="article-item" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <img src="${ad.image_url}" style="height:50px; border-radius:4px;">
+                    <div>
+                        <strong>${ad.title}</strong> <small>(${ad.placement})</small><br>
+                        <small>Active: ${ad.is_active} | Clicks: ${ad.click_count} | Impressions: ${ad.impression_count}</small>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAd(${ad.id})">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function showAddAdForm() { document.getElementById('addAdForm').style.display = 'block'; }
+function hideAddAdForm() { document.getElementById('addAdForm').style.display = 'none'; }
+
+async function createAd() {
+    const title = document.getElementById('ad_title').value;
+    const image_url = document.getElementById('ad_image').value;
+    const link_url = document.getElementById('ad_link').value;
+    const placement = document.getElementById('ad_placement').value;
+    const start_date = document.getElementById('ad_start').value;
+    const end_date = document.getElementById('ad_end').value;
+    const scheduled_publish_at = document.getElementById('scheduled_publish_at').value || null;
+
+    await fetch(`${API_BASE}/ads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ title, image_url, link_url, placement, width: 300, height: 250, start_date, end_date, scheduled_publish_at })
+    });
+    hideAddAdForm();
+    loadAds();
+}
+
+async function deleteAd(id) {
+    if (!confirm('Delete this ad?')) return;
+    await fetch(`${API_BASE}/ads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+    loadAds();
+}
+
+// Rich Text Editor Functions
+function formatText(command) {
+    const textarea = document.getElementById('body');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+
+    if (!selectedText) {
+        alert('Please select text first');
+        return;
+    }
+
+    let formattedText = '';
+
+    switch (command) {
+        case 'bold':
+            formattedText = `<strong>${selectedText}</strong>`;
+            break;
+        case 'italic':
+            formattedText = `<em>${selectedText}</em>`;
+            break;
+        case 'underline':
+            formattedText = `<u>${selectedText}</u>`;
+            break;
+        case 'h2':
+            formattedText = `<h2>${selectedText}</h2>`;
+            break;
+        case 'h3':
+            formattedText = `<h3>${selectedText}</h3>`;
+            break;
+        case 'ul':
+            const ulItems = selectedText.split('\n').filter(line => line.trim());
+            formattedText = '<ul>\n' + ulItems.map(item => `  <li>${item}</li>`).join('\n') + '\n</ul>';
+            break;
+        case 'ol':
+            const olItems = selectedText.split('\n').filter(line => line.trim());
+            formattedText = '<ol>\n' + olItems.map(item => `  <li>${item}</li>`).join('\n') + '\n</ol>';
+            break;
+    }
+
+    textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+    textarea.focus();
+}
+
+function insertLink() {
+    const textarea = document.getElementById('body');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+
+    const url = prompt('Enter URL:', 'https://');
+    if (!url) return;
+
+    const linkText = selectedText || prompt('Enter link text:', 'Click here');
+    const formattedText = `<a href="${url}">${linkText}</a>`;
+
+    textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+    textarea.focus();
+}
+
+// Category Management Functions
+function showAddCategoryForm() {
+    document.getElementById('addCategoryForm').style.display = 'block';
+}
+
+function hideAddCategoryForm() {
+    document.getElementById('addCategoryForm').style.display = 'none';
+    document.getElementById('cat_name').value = '';
+    document.getElementById('cat_slug').value = '';
+    document.getElementById('cat_description').value = '';
+}
+
+async function createCategory() {
+    const name = document.getElementById('cat_name').value;
+    const slug = document.getElementById('cat_slug').value;
+    const description = document.getElementById('cat_description').value;
+
+    if (!name || !slug) {
+        alert('Name and slug are required');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/categories`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ name, slug, description })
+        });
+
+        if (response.ok) {
+            alert('Category created successfully!');
+            hideAddCategoryForm();
+            loadCategories();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        alert('Network error. Please try again.');
+    }
+}
+
+async function deleteCategory(id, name) {
+    if (!confirm(`Are you sure you want to delete category "${name}"?`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/categories/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        if (response.ok) {
+            alert('Category deleted successfully');
+            loadCategories();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        alert('Error deleting category');
+    }
+}
+
+// News Ticker Management
+async function loadTickerSettings() {
+    try {
+        const response = await fetch(`${API_BASE}/settings`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.settings) {
+            const tickerEnabled = data.settings.find(s => s.key === 'ticker_enabled');
+            const tickerText = data.settings.find(s => s.key === 'ticker_text');
+
+            document.getElementById('ticker_enabled').checked = tickerEnabled?.value === 'true';
+            document.getElementById('ticker_text').value = tickerText?.value || '';
+        }
+    } catch (error) {
+        console.error('Error loading ticker settings:', error);
+    }
+}
+
+async function updateTickerSettings() {
+    const enabled = document.getElementById('ticker_enabled').checked;
+    const text = document.getElementById('ticker_text').value;
+
+    try {
+        // Update ticker_enabled setting
+        await fetch(`${API_BASE}/settings/ticker_enabled`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ value: enabled.toString() })
+        });
+
+        // Update ticker_text setting
+        await fetch(`${API_BASE}/settings/ticker_text`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ value: text })
+        });
+
+        alert('Ticker settings updated successfully!');
+    } catch (error) {
+        alert('Error updating ticker settings');
+    }
+}
+
+// Load dashboard stats
+async function loadDashboardStats() {
+    try {
+        const response = await fetch(`${API_BASE}/dashboard/stats`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
+
+        // Update stats
+        let totalArticles = 0;
+        let publishedArticles = 0;
+        let pendingArticles = 0;
+
+        if (data.articles) {
+            data.articles.forEach(stat => {
+                totalArticles += stat.count;
+                if (stat.status === 'published') publishedArticles = stat.count;
+                if (stat.status === 'pending') pendingArticles = stat.count;
+            });
+        }
+
+        document.getElementById('totalArticles').textContent = totalArticles;
+        document.getElementById('publishedArticles').textContent = publishedArticles;
+        document.getElementById('pendingArticles').textContent = pendingArticles;
+        document.getElementById('totalViews').textContent = data.totalViews || 0;
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+// Load recent articles
+async function loadRecentArticles() {
+    try {
+        const response = await fetch(`${API_BASE}/articles?limit=5`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
+        const container = document.getElementById('recentArticles');
+
+        if (data.articles && data.articles.length > 0) {
+            container.innerHTML = data.articles.map(article => `
+                <div class="article-item">
+                    <div class="article-info">
+                        <h3>${article.headline}</h3>
+                        <div class="article-meta">
+                            <span class="status-badge status-${article.status}">${article.status}</span>
+                            <span>By ${article.author_name || 'Unknown'}</span>
+                        </div>
+                    </div>
+                    <div class="article-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="editArticle(${article.id})">Edit</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p>No articles yet</p>';
+        }
+    } catch (error) {
+        console.error('Error loading recent articles:', error);
+    }
+}
+
+// Load all articles
+async function loadAllArticles() {
+    try {
+        const statusFilter = document.getElementById('statusFilter').value;
+        let url = `${API_BASE}/articles?limit=50`;
+        if (statusFilter) url += `&status=${statusFilter}`;
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
+        const container = document.getElementById('articlesList');
+
+        if (data.articles && data.articles.length > 0) {
+            container.innerHTML = data.articles.map(article => `
+                <div class="article-item">
+                    <div class="article-info">
+                        <h3>${article.headline}</h3>
+                        <div class="article-meta">
+                            <span class="status-badge status-${article.status}">${article.status}</span>
+                            <span>${article.category_name || 'Uncategorized'}</span>
+                            <span>${new Date(article.created_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <div class="article-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="editArticle(${article.id})">Edit</button>
+                        ${article.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="approveArticle(${article.id})">Approve</button>` : ''}
+                        <button class="btn btn-sm btn-danger" onclick="deleteArticle(${article.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p>No articles found</p>';
+        }
+    } catch (error) {
+        console.error('Error loading articles:', error);
+    }
+}
+
+// Initialize create article form
+function initCreateArticleForm() {
+    const form = document.getElementById('createArticleForm');
+
+    // Load categories for dropdown
+    loadCategoriesForForm();
+
+    // Handle form submission
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const articleData = {
+            headline: formData.get('headline'),
+            sub_headline: formData.get('sub_headline'),
+            summary: formData.get('summary'),
+            body: formData.get('body'),
+            slug: generateSlug(formData.get('headline')),
+            category_id: formData.get('category_id') || null,
+            status: formData.get('status'),
+            featured_image_url: formData.get('featured_image_url'),
+            is_breaking: formData.get('is_breaking') ? 1 : 0,
+            is_featured: formData.get('is_featured') ? 1 : 0,
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/articles`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify(articleData)
+            });
+
+            if (response.ok) {
+                alert('Article created successfully!');
+                form.reset();
+                loadDashboardStats();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + error.error);
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
+    };
+}
+
+// Load categories for form
+async function loadCategoriesForForm() {
+    try {
+        const response = await fetch(`${API_BASE}/categories`);
+        const data = await response.json();
+
+        const select = document.getElementById('category_id');
+        if (data.categories) {
+            data.categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
+    }
+}
+
+// Load categories
+async function loadCategories() {
+    try {
+        const response = await fetch(`${API_BASE}/categories`);
+        const data = await response.json();
+
+        const container = document.getElementById('categoriesList');
+        if (data.categories && data.categories.length > 0) {
+            container.innerHTML = data.categories.map(cat => `
+                <div class="article-item">
+                    <div class="article-info">
+                        <h3>${cat.name}</h3>
+                        <div class="article-meta">
+                            <span>${cat.description || 'No description'}</span>
+                            <span>Slug: ${cat.slug}</span>
+                        </div>
+                    </div>
+                    <div class="article-actions">
+                        <button class="btn btn-sm btn-danger" onclick="deleteCategory(${cat.id}, '${cat.name}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
+    }
+}
+
+// Load users
+async function loadUsers() {
+    try {
+        const response = await fetch(`${API_BASE}/users`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
+        const container = document.getElementById('usersList');
+
+        if (data.users && data.users.length > 0) {
+            container.innerHTML = data.users.map(user => `
+                <div class="article-item">
+                    <div class="article-info">
+                        <h3>${user.full_name || user.username}</h3>
+                        <div class="article-meta">
+                            <span>${user.email}</span>
+                            <span>${user.is_active ? 'Active' : 'Inactive'}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+}
+
+// Load settings
+async function loadSettings() {
+    try {
+        const response = await fetch(`${API_BASE}/settings`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
+        const container = document.getElementById('settingsList');
+
+        if (data.settings && data.settings.length > 0) {
+            container.innerHTML = `
+                <div class="settings-grid">
+                    ${data.settings.map(setting => `
+                        <div class="setting-item">
+                            <label for="setting_${setting.key}">${formatSettingKey(setting.key)}</label>
+                            <div class="setting-input-group">
+                                <input type="text" id="setting_${setting.key}" value="${setting.value || ''}" 
+                                       ${setting.key === 'ticker_items' ? 'placeholder="Item 1 | Item 2"' : ''}>
+                                <button class="btn btn-sm btn-primary" onclick="updateSetting('${setting.key}')">Save</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+function formatSettingKey(key) {
+    return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+// Update Setting
+window.updateSetting = async function (key) {
+    const input = document.getElementById(`setting_${key}`);
+    const value = input.value;
+
+    try {
+        const response = await fetch(`${API_BASE}/settings/${key}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ value })
+        });
+
+        if (response.ok) {
+            alert(`${formatSettingKey(key)} updated successfully`);
+        } else {
+            alert('Failed to update setting');
+        }
+    } catch (error) {
+        alert('Error updating setting');
+    }
+};
+
+// Rich Text Editor Functions - Exposed to Window
+window.formatText = function (command) {
+    const textarea = document.getElementById('body');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    const fullText = textarea.value;
+
+    // If no text selected, we can still insert tags at cursor
+
+    let replacement = '';
+
+    switch (command) {
+        case 'bold':
+            replacement = `<strong>${selectedText}</strong>`;
+            break;
+        case 'italic':
+            replacement = `<em>${selectedText}</em>`;
+            break;
+        case 'underline':
+            replacement = `<u>${selectedText}</u>`;
+            break;
+        case 'h2':
+            replacement = `\n<h2>${selectedText || 'Heading 2'}</h2>\n`;
+            break;
+        case 'h3':
+            replacement = `\n<h3>${selectedText || 'Heading 3'}</h3>\n`;
+            break;
+        case 'ul':
+            const ulItems = selectedText ? selectedText.split('\n') : ['List item'];
+            replacement = `\n<ul>\n${ulItems.map(i => `  <li>${i}</li>`).join('\n')}\n</ul>\n`;
+            break;
+        case 'ol':
+            const olItems = selectedText ? selectedText.split('\n') : ['List item'];
+            replacement = `\n<ol>\n${olItems.map(i => `  <li>${i}</li>`).join('\n')}\n</ol>\n`;
+            break;
+    }
+
+    textarea.value = fullText.substring(0, start) + replacement + fullText.substring(end);
+
+    // Restore focus
+    textarea.focus();
+};
+
+window.insertLink = function () {
+    const textarea = document.getElementById('body');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+
+    const url = prompt('Enter URL:', 'https://');
+    if (!url) return;
+
+    const text = selectedText || prompt('Link Text:', 'Click Here');
+    const replacement = `<a href="${url}">${text}</a>`;
+
+    textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+    textarea.focus();
+};
+
+// ... existing code ...

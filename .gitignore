@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+server/data/*.db
+
+# Logs
+logs/
+*.log
+server/logs/
+
+# Uploads
+uploads/
+server/uploads/
+
+# Backups
+backups/
+server/backups/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Build
+dist/
+build/
