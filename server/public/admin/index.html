@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ne">
 
 <head>
     <meta charset="UTF-8">
@@ -7,32 +7,32 @@
     <title>Admin Panel - Routine of Dhulikhel Banda</title>
     <link rel="icon" type="image/png" href="/public/fablo/logo.png">
     <link rel="stylesheet" href="/public/admin/css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
     <!-- Login Screen -->
-    <div id="loginScreen" class="login-screen">
+    <div id="loginScreen" class="login-screen" style="display: flex;">
         <div class="login-container">
             <img src="/public/fablo/logo.png" alt="RODB" class="login-logo">
             <h1>Admin Panel</h1>
             <p>Routine of Dhulikhel Banda</p>
-
+            
             <form id="loginForm" class="login-form">
                 <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required autocomplete="username">
+                    <label for="adminId">Admin ID</label>
+                    <input type="text" id="adminId" name="adminId" required autofocus>
                 </div>
+                
                 <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                    <label for="adminPassword">Password</label>
+                    <input type="password" id="adminPassword" name="adminPassword" required>
                 </div>
+                
                 <div id="loginError" class="error-message"></div>
-                <button type="submit" class="btn btn-primary">Login</button>
+                
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px; width: 100%;">Login</button>
             </form>
-
-            <div class="login-hint">
-                <small>Default: admin / admin123</small>
-            </div>
         </div>
     </div>
 
@@ -112,6 +112,15 @@
                         </div>
                     </div>
 
+                    <!-- Dashboard Graphs -->
+                    <div class="dashboard-chart-container"
+                        style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <h3>Article Views Overview</h3>
+                        <div style="height: 300px;">
+                            <canvas id="viewsChart"></canvas>
+                        </div>
+                    </div>
+
                     <div class="dashboard-sections">
                         <div class="dashboard-section">
                             <h2>Recent Articles</h2>
@@ -160,27 +169,99 @@
                         <div class="form-group">
                             <label for="body">Article Body *</label>
                             <div class="editor-toolbar" id="editorToolbar">
-                                <button type="button" class="editor-btn" data-command="bold"
-                                    title="Bold"><b>B</b></button>
-                                <button type="button" class="editor-btn" data-command="italic"
-                                    title="Italic"><i>I</i></button>
-                                <button type="button" class="editor-btn" data-command="underline"
-                                    title="Underline"><u>U</u></button>
-                                <button type="button" class="editor-btn" data-command="formatBlock" data-value="h2"
-                                    title="Heading 2">H2</button>
-                                <button type="button" class="editor-btn" data-command="formatBlock" data-value="h3"
-                                    title="Heading 3">H3</button>
-                                <button type="button" class="editor-btn" data-command="insertUnorderedList"
-                                    title="Bullet List">• List</button>
-                                <button type="button" class="editor-btn" data-command="insertOrderedList"
-                                    title="Numbered List">1. List</button>
-                                <button type="button" class="editor-btn" data-command="createLink"
-                                    title="Insert Link">🔗 Link</button>
-                                <button type="button" class="editor-btn" data-command="insertImage"
-                                    title="Insert Image">🖼️ Image</button>
-                                <input type="color" id="textColor" title="Text Color"
-                                    style="width:35px; height:35px; padding:2px; border:1px solid #ccc; border-radius:4px; vertical-align:middle; cursor:pointer;">
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap; padding: 8px; background: #f5f5f5; border-radius: 4px;">
+                                    <!-- Text Formatting -->
+                                    <button type="button" class="editor-btn" data-command="bold"
+                                        title="Bold"><b>B</b></button>
+                                    <button type="button" class="editor-btn" data-command="italic"
+                                        title="Italic"><i>I</i></button>
+                                    <button type="button" class="editor-btn" data-command="underline"
+                                        title="Underline"><u>U</u></button>
+                                    
+                                    <!-- Separator -->
+                                    <div style="width: 1px; background: #ddd;"></div>
+                                    
+                                    <!-- Text Alignment -->
+                                    <button type="button" class="editor-btn" data-command="justifyLeft"
+                                        title="Align Left">⬅️ Left</button>
+                                    <button type="button" class="editor-btn" data-command="justifyCenter"
+                                        title="Align Center">↔️ Center</button>
+                                    <button type="button" class="editor-btn" data-command="justifyRight"
+                                        title="Align Right">➡️ Right</button>
+                                    
+                                    <!-- Separator -->
+                                    <div style="width: 1px; background: #ddd;"></div>
+                                    
+                                    <!-- Headings and Lists -->
+                                    <button type="button" class="editor-btn" data-command="formatBlock" data-value="h2"
+                                        title="Heading 2">H2</button>
+                                    <button type="button" class="editor-btn" data-command="formatBlock" data-value="h3"
+                                        title="Heading 3">H3</button>
+                                    <button type="button" class="editor-btn" data-command="insertUnorderedList"
+                                        title="Bullet List">• List</button>
+                                    <button type="button" class="editor-btn" data-command="insertOrderedList"
+                                        title="Numbered List">1. List</button>
+                                    
+                                    <!-- Separator -->
+                                    <div style="width: 1px; background: #ddd;"></div>
+                                    
+                                    <!-- Links and Images -->
+                                    <button type="button" class="editor-btn" data-command="createLink"
+                                        title="Insert Link">🔗 Link</button>
+                                    <button type="button" class="editor-btn" data-command="insertImage"
+                                        title="Insert Image URL">🔗 Image URL</button>
+                                    <button type="button" class="editor-btn" id="uploadImageBtn"
+                                        title="Upload Image">📤 Upload Image</button>
+                                    <input type="file" id="imageUploadInput" style="display: none;" accept="image/*">
+                                    
+                                    <!-- Separator -->
+                                    <div style="width: 1px; background: #ddd;"></div>
+                                    
+                                    <!-- Text Color -->
+                                    <input type="color" id="textColor" title="Text Color"
+                                        style="width:35px; height:35px; padding:2px; border:1px solid #ccc; border-radius:4px; vertical-align:middle; cursor:pointer;">
+                                </div>
                             </div>
+                            
+                            <!-- Image Upload Modal -->
+                            <div id="imageUploadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; flex-direction: column;">
+                                <div style="background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <h3>Upload & Configure Image</h3>
+                                    
+                                    <div class="form-group" style="margin: 15px 0;">
+                                        <label>Select Image:</label>
+                                        <input type="file" id="modalImageInput" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <small style="color: #666;">Maximum file size: 5MB</small>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 10px; margin: 15px 0;">
+                                        <div class="form-group" style="flex: 1;">
+                                            <label for="imgWidth">Width (px):</label>
+                                            <input type="number" id="imgWidth" value="400" min="50" max="800" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        </div>
+                                        <div class="form-group" style="flex: 1;">
+                                            <label for="imgHeight">Height (px):</label>
+                                            <input type="number" id="imgHeight" value="300" min="50" max="800" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group" style="margin: 15px 0;">
+                                        <label for="imgAlignment">Image Alignment:</label>
+                                        <select id="imgAlignment" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                            <option value="none">None (Inline)</option>
+                                            <option value="left">Float Left (Text wraps right)</option>
+                                            <option value="center">Center (Block)</option>
+                                            <option value="right">Float Right (Text wraps left)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 10px;">
+                                        <button type="button" class="btn btn-primary" id="insertImageBtn" style="flex: 1;">Insert Image</button>
+                                        <button type="button" class="btn btn-secondary" id="cancelImageBtn" style="flex: 1;">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div id="body" class="editor-content" contenteditable="true"
                                 style="min-height: 400px; border: 1px solid #ddd; padding: 15px; border-radius: 4px; overflow-y: auto; background: white; font-family: Arial, sans-serif; line-height: 1.6;">
                                 <p>Start writing your article here...</p>
@@ -211,8 +292,13 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="featured_image_url">Featured Image URL</label>
-                            <input type="url" id="featured_image_url" name="featured_image_url">
+                            <label for="featured_image_url">Featured Image</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <input type="text" id="featured_image_url" name="featured_image_url" placeholder="Image URL or upload image below" style="flex: 1;">
+                                <button type="button" id="uploadFeaturedImageBtn" class="btn btn-secondary" onclick="document.getElementById('featuredImageInput').click();" style="white-space: nowrap;">Upload Image</button>
+                            </div>
+                            <input type="file" id="featuredImageInput" accept="image/*" style="display: none;">
+                            <div id="featuredImagePreview" style="margin-top: 10px; max-width: 200px;"></div>
                         </div>
 
                         <div class="form-group">
@@ -238,7 +324,7 @@
                 <section id="section-categories" class="content-section">
                     <div class="section-header">
                         <h2>Categories</h2>
-                        <button class="btn btn-primary" onclick="showAddCategoryForm()">Add Category</button>
+                        <button class="btn btn-primary" id="addCategoryBtn">Add Category</button>
                     </div>
 
                     <div id="addCategoryForm" class="article-form" style="display: none; margin-bottom: 30px;">
@@ -258,8 +344,8 @@
                             <textarea id="cat_description" rows="2"></textarea>
                         </div>
                         <div class="form-actions">
-                            <button class="btn btn-primary" onclick="createCategory()">Create Category</button>
-                            <button class="btn btn-secondary" onclick="hideAddCategoryForm()">Cancel</button>
+                            <button class="btn btn-primary" id="createCategoryBtn">Create Category</button>
+                            <button class="btn btn-secondary" id="cancelCategoryBtn">Cancel</button>
                         </div>
                     </div>
 
@@ -299,6 +385,68 @@
                 <!-- Settings Section -->
                 <section id="section-settings" class="content-section">
                     <h2>Settings</h2>
+                    
+                    <!-- Trending News -->
+                    <div class="article-form" style="margin-bottom: 30px;">
+                        <h3>Trending News</h3>
+                        <div class="form-group">
+                            <label for="trending_news">Trending Articles (one per line - enter article IDs)</label>
+                            <textarea id="trending_news" rows="4" placeholder="Enter article IDs separated by line breaks&#10;Example:&#10;1&#10;5&#10;10"></textarea>
+                            <small style="display: block; margin-top: 10px; color: #666;">
+                                <strong>How to find article IDs:</strong>
+                                <ol style="margin: 5px 0;">
+                                    <li>Go to "All Articles" section</li>
+                                    <li>Click on an article to edit it</li>
+                                    <li>Check the URL bar - it will show the article ID</li>
+                                    <li>Enter those IDs here, one per line</li>
+                                </ol>
+                                The articles will be displayed with their summaries in the "Trending News" widget on the homepage.
+                            </small>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="saveTrendingNews()">Save Trending News</button>
+                        </div>
+                    </div>
+
+                    <!-- Hot News -->
+                    <div class="article-form" style="margin-bottom: 30px;">
+                        <h3>Hot News</h3>
+                        <div class="form-group">
+                            <label for="hot_news">Hot News Headlines (one per line)</label>
+                            <textarea id="hot_news" rows="4" placeholder="Enter headlines separated by line breaks&#10;Example:&#10;Breaking: Major News&#10;Update: Latest Info&#10;Alert: Important Notice"></textarea>
+                            <small>Enter the headlines that should appear in the "Hot News" section on the homepage</small>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="saveHotNews()">Save Hot News</button>
+                        </div>
+                    </div>
+
+                    <!-- About Section -->
+                    <div class="article-form" style="margin-bottom: 30px;">
+                        <h3>About Us</h3>
+                        <div class="form-group">
+                            <label for="about_content">About Content</label>
+                            <textarea id="about_content" rows="5" placeholder="Enter about section content..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="saveAboutContent()">Save About Section</button>
+                        </div>
+                    </div>
+
+                    <!-- Contact Section -->
+                    <div class="article-form" style="margin-bottom: 30px;">
+                        <h3>Contact Information</h3>
+                        <div class="form-group">
+                            <label for="contact_content">Contact Content</label>
+                            <textarea id="contact_content" rows="5" placeholder="Enter contact information..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="saveContactContent()">Save Contact Section</button>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h3>Other Settings</h3>
                     <div id="settingsList" class="settings-list"></div>
                 </section>
 
@@ -358,14 +506,9 @@
                             <div class="form-group">
                                 <label>Ad Size & Placement</label>
                                 <select id="ad_placement">
-                                    <option value="leaderboard">Leaderboard (728 × 90 px)</option>
-                                    <option value="large_rectangle">Large Rectangle (336 × 280 px)</option>
-                                    <option value="medium_rectangle">Medium Rectangle (300 × 250 px)</option>
-                                    <option value="wide_skyscraper">Wide Skyscraper (160 × 600 px)</option>
-                                    <option value="skyscraper">Skyscraper (120 × 600 px)</option>
-                                    <option value="button1">Button 1 (120 × 90 px)</option>
-                                    <option value="button2">Button 2 (120 × 60 px)</option>
-                                    <option value="microbar">Microbar (88 × 31 px)</option>
+                                    <option value="header">Header Banner (728 × 90 px)</option>
+                                    <option value="content_top">Left Sidebar (336 × 280 px)</option>
+                                    <option value="content_bottom">Right Sidebar (300 × 250 px)</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -388,9 +531,11 @@
         </main>
     </div>
 
+    <script src="/public/admin/js/notification.js"></script>
     <script src="/public/admin/js/admin.js"></script>
     <script src="/public/admin/js/article-listeners.js"></script>
-    <script src="/public/admin/js/editor-init.js"></script>
+    <script src="/public/admin/js/editor-v2.js"></script>
+    <script src="/public/admin/js/category-listeners.js"></script>
 </body>
 
 </html>

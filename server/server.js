@@ -4,18 +4,10 @@ const database = require('./config/database');
 const logger = require('./utils/logger');
 
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || 'localhost';
+// Bind to 0.0.0.0 by default to allow port forwarding / external access
+const HOST = process.env.HOST || '0.0.0.0';
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/articles', require('./routes/articles'));
-app.use('/api/categories', require('./routes/categories'));
-app.use('/api/dashboard', require('./routes/dashboard'));
-app.use('/api/settings', require('./routes/settings'));
-app.use('/api/navigation', require('./routes/navigation'));
-app.use('/api/ads', require('./routes/ads'));
-app.use('/api', require('./routes/health'));
+// Routes are defined in app.js - no need to redefine here
 
 let server;
 
@@ -24,6 +16,15 @@ async function startServer() {
         // Initialize database
         await database.initialize();
         logger.info('Database initialized');
+
+        // Auto-publish approved articles
+        try {
+            const Article = require('./models/Article');
+            const publishedCount = await Article.autoPublishApproved();
+            logger.info(`Auto-published ${publishedCount} approved articles (if any).`);
+        } catch (err) {
+            logger.error('Auto-publish error:', err);
+        }
 
         // Start server
         server = app.listen(PORT, HOST, () => {

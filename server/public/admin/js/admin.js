@@ -17,7 +17,7 @@ function initKeyboardShortcut() {
         if (e.ctrlKey && e.altKey && e.key === 'a') {
             e.preventDefault();
             if (!authToken) {
-                document.getElementById('username').focus();
+                document.getElementById('adminId').focus();
             }
         }
     });
@@ -25,8 +25,7 @@ function initKeyboardShortcut() {
 
 // Check authentication
 function checkAuth() {
-    authToken = localStorage.getItem('authToken');
-
+    authToken = localStorage.getItem('adminToken');
     if (authToken) {
         verifyToken();
     } else {
@@ -37,7 +36,7 @@ function checkAuth() {
 // Verify token
 async function verifyToken() {
     try {
-        const response = await fetch(`${API_BASE}/auth/me`, {
+        const response = await fetch(`${API_BASE}/admin-auth/verify`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -45,9 +44,11 @@ async function verifyToken() {
 
         if (response.ok) {
             const data = await response.json();
-            currentUser = data.user;
+            currentUser = { id: data.admin.id, role: data.admin.role };
             showDashboard();
         } else {
+            localStorage.removeItem('adminToken');
+            authToken = null;
             showLogin();
         }
     } catch (error) {
@@ -56,41 +57,48 @@ async function verifyToken() {
     }
 }
 
-// Show login screen
+// Replace global functions if they were defined here, or ensuring they use notification.js
+// Note: notification.js already exposes window.showSuccess etc.
+
 function showLogin() {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('adminDashboard').style.display = 'none';
+    const loginScreen = document.getElementById('loginScreen');
+    const adminDashboard = document.getElementById('adminDashboard');
+
+    if (loginScreen) loginScreen.style.display = 'flex';
+    if (adminDashboard) adminDashboard.style.display = 'none';
 
     const loginForm = document.getElementById('loginForm');
-    loginForm.addEventListener('submit', handleLogin);
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
 }
 
-// Handle login
 async function handleLogin(e) {
     e.preventDefault();
-
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const id = document.getElementById('adminId').value;
+    const password = document.getElementById('adminPassword').value;
     const errorDiv = document.getElementById('loginError');
 
-    try {
-        const response = await fetch(`${API_BASE}/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ username, password })
-        });
+    // Clear previous errors
+    errorDiv.textContent = '';
+    errorDiv.classList.remove('show');
 
+    try {
+        const response = await fetch(`${API_BASE}/admin-auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, password })
+        });
         const data = await response.json();
 
-        if (response.ok) {
-            authToken = data.accessToken;
-            currentUser = data.user;
-            localStorage.setItem('authToken', authToken);
+        if (response.ok && data.success) {
+            authToken = data.token;
+            currentUser = data.admin;
+            localStorage.setItem('adminToken', authToken);
             showDashboard();
+            showSuccess('Welcome to Admin Panel');
         } else {
-            errorDiv.textContent = data.error || 'Login failed';
+            errorDiv.textContent = data.error || 'Invalid credentials';
             errorDiv.classList.add('show');
         }
     } catch (error) {
@@ -101,20 +109,47 @@ async function handleLogin(e) {
 
 // Show dashboard
 function showDashboard() {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('adminDashboard').style.display = 'grid';
+    try {
+        const loginScreen = document.getElementById('loginScreen');
+        const adminDashboard = document.getElementById('adminDashboard');
 
-    // Display user info
-    document.getElementById('userInfo').textContent = `Logged in as: ${currentUser.username}`;
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (adminDashboard) adminDashboard.style.display = 'grid';
 
-    // Initialize dashboard
-    initNavigation();
-    loadDashboardStats();
-    loadRecentArticles();
-    loadCategories();
+        // Display user info
+        document.getElementById('userInfo').textContent = `Admin: ${currentUser.id}`;
 
-    // Logout button
-    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+        // Initialize dashboard
+        initNavigation();
+        loadDashboardStats();
+        loadRecentArticles();
+        loadCategories();
+        setDefaultStartDate();
+
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    } catch (err) {
+        console.error('Error while showing dashboard:', err);
+        if (window.showError) {
+            window.showError('Error loading dashboard: ' + (err.message || err));
+        } else {
+            alert('Error loading dashboard: ' + (err.message || err));
+        }
+    }
+}
+
+// Set default start date to today
+function setDefaultStartDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+
+    const startDateInput = document.getElementById('ad_start');
+    if (startDateInput && !startDateInput.value) {
+        startDateInput.value = dateString;
+    }
 }
 
 // Initialize navigation
@@ -234,24 +269,50 @@ async function createNavItem() {
 
 async function deleteNavItem(id) {
     if (!confirm('Delete this item?')) return;
-    await fetch(`${API_BASE}/navigation/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
-    loadNavigation();
+    try {
+        const response = await fetch(`${API_BASE}/navigation/${id}`, { 
+            method: 'DELETE', 
+            headers: { 'Authorization': `Bearer ${authToken}` } 
+        });
+        
+        if (response.ok) {
+            showSuccess('Navigation item deleted successfully');
+            loadNavigation();
+        } else {
+            const error = await response.json();
+            showError('Error: ' + (error.error || 'Failed to delete'));
+        }
+    } catch (error) {
+        showError('Error deleting navigation item: ' + error.message);
+    }
 }
 
 // Ads Functions
 async function loadAds() {
     try {
         const response = await fetch(`${API_BASE}/ads/all`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+
+        if (!response.ok) {
+            const error = await response.json();
+            showError('Error: ' + error.error);
+            return;
+        }
+
         const data = await response.json();
         const list = document.getElementById('adsList');
+
+        if (!data.ads || data.ads.length === 0) {
+            list.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No ads found</p>';
+            return;
+        }
 
         list.innerHTML = data.ads.map(ad => `
             <div class="article-item" style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display:flex; gap:10px; align-items:center;">
                     <img src="${ad.image_url}" style="height:50px; border-radius:4px;">
                     <div>
-                        <strong>${ad.title}</strong> <small>(${ad.placement})</small><br>
-                        <small>Active: ${ad.is_active} | Clicks: ${ad.click_count} | Impressions: ${ad.impression_count}</small>
+                        <strong>${ad.name}</strong> <small>(${ad.placement})</small><br>
+                        <small>Size: ${ad.width}x${ad.height}px | Clicks: ${ad.click_count} | Impressions: ${ad.impression_count}</small>
                     </div>
                 </div>
                 <div>
@@ -261,6 +322,7 @@ async function loadAds() {
         `).join('');
     } catch (e) {
         console.error(e);
+        showError('Error loading ads: ' + e.message);
     }
 }
 
@@ -276,20 +338,15 @@ async function createAd() {
     const end_date = document.getElementById('ad_end').value;
 
     if (!title || !image_url || !link_url) {
-        alert('Title, Image URL, and Link URL are required');
+        showWarning('Title, Image URL, and Link URL are required');
         return;
     }
 
     // Map ad sizes to dimensions
     const adSizes = {
-        'leaderboard': { width: 728, height: 90 },
-        'large_rectangle': { width: 336, height: 280 },
-        'medium_rectangle': { width: 300, height: 250 },
-        'wide_skyscraper': { width: 160, height: 600 },
-        'skyscraper': { width: 120, height: 600 },
-        'button1': { width: 120, height: 90 },
-        'button2': { width: 120, height: 60 },
-        'microbar': { width: 88, height: 31 }
+        'header': { width: 728, height: 90 },
+        'content_top': { width: 336, height: 280 },
+        'content_bottom': { width: 300, height: 250 }
     };
 
     const size = adSizes[placement] || { width: 300, height: 250 };
@@ -299,7 +356,7 @@ async function createAd() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
             body: JSON.stringify({
-                title,
+                name: title,
                 image_url,
                 link_url,
                 placement,
@@ -311,22 +368,36 @@ async function createAd() {
         });
 
         if (response.ok) {
-            alert('Ad created successfully!');
+            showSuccess('Ad created successfully!');
             hideAddAdForm();
             loadAds();
         } else {
             const error = await response.json();
-            alert('Error: ' + error.error);
+            showError('Error: ' + error.error);
         }
     } catch (error) {
-        alert('Network error. Please try again.');
+        showError('Network error. Please try again.');
     }
 }
 
 async function deleteAd(id) {
     if (!confirm('Delete this ad?')) return;
-    await fetch(`${API_BASE}/ads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
-    loadAds();
+    try {
+        const response = await fetch(`${API_BASE}/ads/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        if (response.ok) {
+            showSuccess('Ad deleted successfully');
+            loadAds();
+        } else {
+            const error = await response.json();
+            showError('Error: ' + error.error);
+        }
+    } catch (error) {
+        showError('Error deleting ad');
+    }
 }
 
 // Rich Text Editor Functions
@@ -337,7 +408,7 @@ function formatText(command) {
     const selectedText = textarea.value.substring(start, end);
 
     if (!selectedText) {
-        alert('Please select text first');
+        showWarning('Please select text first');
         return;
     }
 
@@ -407,7 +478,7 @@ async function createCategory() {
     const description = document.getElementById('cat_description').value;
 
     if (!name) {
-        alert('Category name is required');
+        showWarning('Category name is required');
         return;
     }
 
@@ -426,15 +497,15 @@ async function createCategory() {
         });
 
         if (response.ok) {
-            alert('Category created successfully!');
+            showSuccess('Category created successfully!');
             hideAddCategoryForm();
             loadCategories();
         } else {
             const error = await response.json();
-            alert('Error: ' + error.error);
+            showError('Error: ' + error.error);
         }
     } catch (error) {
-        alert('Network error. Please try again.');
+        showError('Network error. Please try again.');
     }
 }
 
@@ -450,14 +521,14 @@ async function deleteCategory(id, name) {
         });
 
         if (response.ok) {
-            alert('Category deleted successfully');
+            showSuccess('Category deleted successfully');
             loadCategories();
         } else {
             const error = await response.json();
-            alert('Error: ' + error.error);
+            showError('Error: ' + error.error);
         }
     } catch (error) {
-        alert('Error deleting category');
+        showError('Error deleting category');
     }
 }
 
@@ -509,29 +580,39 @@ async function updateTickerSettings() {
             body: JSON.stringify({ value: text })
         });
 
-        alert('Ticker settings updated successfully!');
+        showSuccess('Ticker settings updated successfully!');
     } catch (error) {
-        alert('Error updating ticker settings');
+        showError('Error updating ticker settings');
     }
 }
 
 // Load dashboard stats
 async function loadDashboardStats() {
     try {
+        console.log('Loading dashboard stats, authToken:', authToken ? 'present' : 'null');
         const response = await fetch(`${API_BASE}/dashboard/stats`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
         });
 
+        console.log('Dashboard stats response status:', response.status);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Dashboard stats error:', errorData);
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error}`);
+        }
+
         const data = await response.json();
+        console.log('Dashboard stats data received:', data);
 
         // Update stats
         let totalArticles = 0;
         let publishedArticles = 0;
         let pendingArticles = 0;
 
-        if (data.articles) {
+        if (data.articles && Array.isArray(data.articles)) {
             data.articles.forEach(stat => {
                 totalArticles += stat.count;
                 if (stat.status === 'published') publishedArticles = stat.count;
@@ -539,12 +620,93 @@ async function loadDashboardStats() {
             });
         }
 
+        console.log('Dashboard stats calculated:', { totalArticles, publishedArticles, pendingArticles });
+        
         document.getElementById('totalArticles').textContent = totalArticles;
         document.getElementById('publishedArticles').textContent = publishedArticles;
         document.getElementById('pendingArticles').textContent = pendingArticles;
         document.getElementById('totalViews').textContent = data.totalViews || 0;
+
+        // Render Chart
+        if (data.articles) {
+            renderDashboardChart(data);
+        }
+
     } catch (error) {
         console.error('Error loading stats:', error);
+        console.error('Error details:', error.message, error.stack);
+        showError('Failed to load dashboard stats: ' + error.message);
+    }
+}
+
+// Render Dashboard Chart
+let dashboardChart = null;
+function renderDashboardChart(data) {
+    try {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js is not loaded');
+            return;
+        }
+
+        const ctx = document.getElementById('viewsChart');
+        if (!ctx) {
+            console.warn('Chart canvas not found');
+            return;
+        }
+
+        if (!data || !data.articles || !Array.isArray(data.articles)) {
+            console.warn('Invalid data for chart:', data);
+            return;
+        }
+
+        if (dashboardChart) {
+            dashboardChart.destroy();
+        }
+
+        // Extract counts with safety checks
+        const labels = ['Published', 'Pending', 'Drafts'];
+        const counts = [
+            data.articles.find(s => s.status === 'published')?.count || 0,
+            data.articles.find(s => s.status === 'pending')?.count || 0,
+            data.articles.find(s => s.status === 'draft')?.count || 0,
+        ];
+
+        dashboardChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Article Count by Status',
+                    data: counts,
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(201, 203, 207, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(201, 203, 207, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+        }
+        });
+        console.log('Dashboard chart rendered successfully');
+    } catch (error) {
+        console.error('Error rendering chart:', error);
     }
 }
 
@@ -608,6 +770,7 @@ async function loadAllArticles() {
                             <span class="status-badge status-${article.status}">${article.status}</span>
                             <span>${article.category_name || 'Uncategorized'}</span>
                             <span>${new Date(article.created_at).toLocaleDateString()}</span>
+                            <span style="background: #e0e0e0; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; font-weight: 600; margin-left: 8px;">ID: ${article.id}</span>
                         </div>
                     </div>
                     <div class="article-actions">
@@ -637,6 +800,9 @@ function initCreateArticleForm() {
 
     // Ensure button text is reset when form is shown
     document.querySelector('#createArticleForm button[type="submit"]').textContent = editingArticleId ? 'Update Article' : 'Create Article';
+
+    // Initialize featured image upload
+    initFeaturedImageUpload();
 
     // Handle form submission
     form.onsubmit = async (e) => {
@@ -674,20 +840,111 @@ function initCreateArticleForm() {
             });
 
             if (response.ok) {
-                alert(editingArticleId ? 'Article updated successfully!' : 'Article created successfully!');
+                showSuccess(editingArticleId ? 'Article updated successfully!' : 'Article created successfully!');
                 resetForm();
                 loadDashboardStats();
                 showSection('articles');
                 loadAllArticles();
             } else {
                 const error = await response.json();
-                alert('Error: ' + error.error);
+                showError('Error: ' + error.error);
             }
         } catch (error) {
-            alert('Network error. Please try again.');
+            showError('Network error. Please try again.');
         }
     };
 }
+
+// Initialize featured image upload - with guard against multiple initializations
+function initFeaturedImageUpload() {
+    const featuredImageInput = document.getElementById('featuredImageInput');
+    const featuredImageUrl = document.getElementById('featured_image_url');
+    const featuredImagePreview = document.getElementById('featuredImagePreview');
+
+    if (!featuredImageInput) {
+        console.warn('Featured image input not found');
+        return;
+    }
+
+    // Prevent duplicate initialization by removing previous listener if it exists
+    if (featuredImageInput._uploadHandlerInitialized) {
+        console.log('Featured image upload handler already initialized, skipping duplicate');
+        return;
+    }
+    featuredImageInput._uploadHandlerInitialized = true;
+
+    console.log('Initializing featured image upload handler');
+
+    featuredImageInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+            console.log('No file selected');
+            return;
+        }
+
+        console.log('File selected:', file.name, file.size, file.type);
+
+        if (file.size > 10 * 1024 * 1024) {
+            showError('File size exceeds 10MB limit');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onerror = (error) => {
+            console.error('FileReader error:', error);
+            showError('Failed to read file');
+        };
+        
+        reader.onload = async (event) => {
+            const base64Data = event.target.result;
+            console.log('Base64 data prepared, length:', base64Data.length);
+
+            try {
+                console.log('Uploading to /api/media/upload');
+                const response = await fetch(`${API_BASE}/media/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        base64Data,
+                        filename: file.name
+                    })
+                });
+
+                console.log('Upload response status:', response.status);
+                const data = await response.json();
+                console.log('Upload response data:', data);
+
+                if (!response.ok) {
+                    showError('Upload failed: ' + (data.error || 'Unknown error'));
+                    return;
+                }
+
+                if (data.url) {
+                    console.log('Upload successful, URL:', data.url);
+                    featuredImageUrl.value = data.url;
+                    
+                    // Show preview
+                    featuredImagePreview.innerHTML = `
+                        <img src="${data.url}" style="max-width: 100%; height: auto; border-radius: 4px; border: 1px solid #ddd;" onload="console.log('Preview image loaded')" onerror="console.error('Preview image failed to load')">
+                        <p style="margin-top: 5px; font-size: 0.9em; color: #666;">Image uploaded successfully: ${data.filename}</p>
+                    `;
+                    
+                    showSuccess('Featured image uploaded successfully');
+                } else {
+                    showError('Upload failed: No URL returned');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showError('Failed to upload image: ' + error.message);
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 
 // Load categories for form
 async function loadCategoriesForForm() {
@@ -820,12 +1077,12 @@ window.updateSetting = async function (key) {
         });
 
         if (response.ok) {
-            alert(`${formatSettingKey(key)} updated successfully`);
+            showSuccess(`${formatSettingKey(key)} updated successfully`);
         } else {
-            alert('Failed to update setting');
+            showError('Failed to update setting');
         }
     } catch (error) {
-        alert('Error updating setting');
+        showError('Error updating setting');
     }
 };
 
@@ -922,20 +1179,22 @@ window.editArticle = async function (id) {
         }
     } catch (e) {
         console.error(e);
-        alert('Error loading article');
+        showError('Error loading article');
     }
 };
 
 function resetForm() {
     document.getElementById('createArticleForm').reset();
     document.getElementById('body').innerHTML = '';
+    document.getElementById('featuredImagePreview').innerHTML = '';
+    document.getElementById('featuredImageInput').value = '';
     editingArticleId = null;
     document.querySelector('#section-create-article h2').textContent = 'Create New Article';
     document.querySelector('#createArticleForm button[type="submit"]').textContent = 'Create Article';
 }
 
-// Delete Article
-async function deleteArticle(id) {
+// Delete Article (exposed to window for event listeners)
+window.deleteArticle = async function (id) {
     if (!confirm('Are you sure you want to delete this article?')) return;
 
     try {
@@ -947,21 +1206,22 @@ async function deleteArticle(id) {
         });
 
         if (response.ok) {
-            alert('Article deleted successfully');
+            showSuccess('Article deleted successfully');
             loadAllArticles();
             loadRecentArticles();
             loadDashboardStats();
         } else {
             const error = await response.json();
-            alert('Error: ' + error.error);
+            showError('Error: ' + error.error);
         }
     } catch (error) {
-        alert('Error deleting article');
+        showError('Error deleting article');
     }
-}
+};
 
 // Approve Article
-async function approveArticle(id) {
+// Approve article (exposed to window for event listeners)
+window.approveArticle = async function (id) {
     if (!confirm('Approve this article for publication?')) return;
 
     try {
@@ -975,18 +1235,18 @@ async function approveArticle(id) {
         });
 
         if (response.ok) {
-            alert('Article approved and published!');
+            showSuccess('Article approved and published!');
             loadAllArticles();
             loadRecentArticles();
             loadDashboardStats();
         } else {
             const error = await response.json();
-            alert('Error: ' + error.error);
+            showError('Error: ' + error.error);
         }
     } catch (error) {
-        alert('Error approving article');
+        showError('Error approving article');
     }
-}
+};
 
 // Generate Slug with timestamp for uniqueness
 function generateSlug(text) {
@@ -1009,7 +1269,7 @@ function previewArticle() {
     const summary = document.getElementById('summary').value;
 
     if (!headline || !body) {
-        alert('Please add a headline and body content before previewing');
+        showWarning('Please add a headline and body content before previewing');
         return;
     }
 
@@ -1017,7 +1277,7 @@ function previewArticle() {
         const previewWindow = window.open('', 'ArticlePreview', 'width=800,height=600,scrollbars=yes');
 
         if (!previewWindow) {
-            alert('Preview blocked by popup blocker. Please allow popups for this site and try again.');
+            showError('Preview blocked by popup blocker. Please allow popups for this site and try again');
             return;
         }
 
@@ -1086,8 +1346,168 @@ function previewArticle() {
         previewWindow.document.close();
     } catch (error) {
         console.error('Preview error:', error);
-        alert('Error opening preview. Please check your browser settings.');
+        showError('Error opening preview. Please check your browser settings.');
     }
 }
 
+// Logout
+function handleLogout() {
+    localStorage.removeItem('adminToken');
+    authToken = null;
+    currentUser = null;
+    window.location.reload();
+}
+// Trending News Management
+window.saveTrendingNews = async function () {
+    const content = document.getElementById('trending_news').value;
 
+    if (!content.trim()) {
+        showWarning('Please enter trending article IDs');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/settings/trending_articles`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ value: content })
+        });
+
+        if (response.ok) {
+            showSuccess('Trending news updated successfully');
+        } else {
+            showError('Failed to update trending news');
+        }
+    } catch (error) {
+        showError('Error updating trending news');
+    }
+};
+
+// Hot News Management
+window.saveHotNews = async function () {
+    const content = document.getElementById('hot_news').value;
+
+    if (!content.trim()) {
+        showWarning('Please enter hot news headlines');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/settings/hot_news`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ value: content })
+        });
+
+        if (response.ok) {
+            showSuccess('Hot news updated successfully');
+        } else {
+            showError('Failed to update hot news');
+        }
+    } catch (error) {
+        showError('Error updating hot news');
+    }
+};
+
+// About Content Management
+window.saveAboutContent = async function () {
+    const content = document.getElementById('about_content').value;
+
+    if (!content.trim()) {
+        showWarning('Please enter about content');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/settings/about_content`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ value: content })
+        });
+
+        if (response.ok) {
+            showSuccess('About section updated successfully');
+        } else {
+            showError('Failed to update about section');
+        }
+    } catch (error) {
+        showError('Error updating about section');
+    }
+};
+
+// Contact Content Management
+window.saveContactContent = async function () {
+    const content = document.getElementById('contact_content').value;
+
+    if (!content.trim()) {
+        showWarning('Please enter contact content');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/settings/contact_content`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ value: content })
+        });
+
+        if (response.ok) {
+            showSuccess('Contact section updated successfully');
+        } else {
+            showError('Failed to update contact section');
+        }
+    } catch (error) {
+        showError('Error updating contact section');
+    }
+};
+
+// Update loadSettings to also load the new custom settings
+const originalLoadSettings = loadSettings;
+window.loadSettings = async function () {
+    await originalLoadSettings();
+
+    // Load custom settings
+    try {
+        const response = await fetch(`${API_BASE}/settings`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.settings) {
+            const trendingNews = data.settings.find(s => s.key === 'trending_articles');
+            const hotNews = data.settings.find(s => s.key === 'hot_news');
+            const aboutContent = data.settings.find(s => s.key === 'about_content');
+            const contactContent = data.settings.find(s => s.key === 'contact_content');
+
+            if (trendingNews && trendingNews.value) {
+                document.getElementById('trending_news').value = trendingNews.value;
+            }
+            if (hotNews && hotNews.value) {
+                document.getElementById('hot_news').value = hotNews.value;
+            }
+            if (aboutContent && aboutContent.value) {
+                document.getElementById('about_content').value = aboutContent.value;
+            }
+            if (contactContent && contactContent.value) {
+                document.getElementById('contact_content').value = contactContent.value;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading custom settings:', error);
+    }
+};

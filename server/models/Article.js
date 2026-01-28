@@ -2,6 +2,22 @@ const database = require('../config/database');
 const logger = require('../utils/logger');
 
 class Article {
+        // Utility: Auto-publish approved articles whose scheduled_publish_at is in the past
+        static async autoPublishApproved() {
+            const now = new Date().toISOString();
+            // Find all approved articles that should be published
+            const articlesToPublish = await database.all(
+                `SELECT id FROM articles WHERE status = 'approved' AND (scheduled_publish_at IS NULL OR scheduled_publish_at <= ?)`,
+                [now]
+            );
+            for (const art of articlesToPublish) {
+                await database.run(
+                    `UPDATE articles SET status = 'published', published_at = COALESCE(published_at, ?) WHERE id = ?`,
+                    [now, art.id]
+                );
+            }
+            return articlesToPublish.length;
+        }
     // Create article
     static async create(articleData) {
         const {
@@ -187,7 +203,7 @@ class Article {
             query += ' ORDER BY ';
         }
 
-        query += filters.orderBy || 'a.published_at DESC';
+        query += filters.orderBy || 'a.created_at DESC';
 
         // Pagination
         const limit = filters.limit || 20;

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ne">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Article</title>
+    <link rel="stylesheet" href="/public/site/css/main.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        .article-container {
+            max-width: 900px;
+            margin: 28px auto;
+            padding: 20px
+        }
+
+        .article-headline {
+            font-size: 2rem;
+            margin: 0 0 10px
+        }
+
+        .article-meta {
+            color: var(--text-muted);
+            margin-bottom: 16px
+        }
+
+        .article-image {
+            width: 120px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            display: inline-block;
+            margin-right: 16px;
+            float: left;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 16px;
+            color: var(--primary);
+            text-decoration: none
+        }
+
+        .article-body {
+            line-height: 1.8;
+            font-size: 1rem;
+            overflow: auto;
+        }
+        
+        .article-body img {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 10px 10px 0;
+        }
+
+        /* Fix body padding as main.css adds padding-top */
+    </style>
+</head>
+
+<body>
+
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-actions">
+                <div id="google_translate_element"></div>
+            </div>
+        </div>
+    </div>
+
+    <header class="main-header">
+        <div class="container header-grid">
+            <div class="logo-area">
+                <button class="menu-toggle" id="menuToggleBtn" onclick="toggleMenu()">☰</button>
+                <a href="/" class="logo-link"
+                    style="display: flex; align-items: center; gap: 15px; text-decoration: none;">
+                    <img src="/public/fablo/logo.png" alt="RODB" class="logo-img">
+                    <div class="logo-text">
+                        <h1 style="margin: 0; font-size: 1.4em; color: var(--primary);">Routine of Dhulikhel Banda</h1>
+                    </div>
+                </a>
+            </div>
+            <div class="header-ad" id="ad_header"></div>
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-btn">🌙</button>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search news...">
+                    <button id="searchBtn"
+                        style="background: var(--primary); color: white; border: none; padding: 5px 10px; border-radius: 0 5px 5px 0; cursor: pointer;">Search</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="top-navigation" id="topNav">
+        <div class="container">
+            <ul id="topNavList" style="list-style: none; padding: 0; margin: 0; display: flex; gap: 30px;">
+                <!-- Loaded from API -->
+            </ul>
+        </div>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <div style="padding: 15px; background: var(--bg-card); border-bottom: 1px solid var(--border);">
+            <h3 style="margin-top: 0;">Menu</h3>
+            <ul id="mobileNavList" style="list-style: none; padding: 0; margin: 0;"></ul>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <h4 style="margin-top: 0;">Categories</h4>
+                <ul id="mobileCatList" style="list-style: none; padding: 0; margin: 0;"></ul>
+            </div>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <h4 style="margin-top: 0;">About</h4>
+                <p id="mobileAbout" style="margin: 0; font-size: 0.9em;"></p>
+            </div>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <h4 style="margin-top: 0;">Contact</h4>
+                <p id="mobileContact" style="margin: 0; font-size: 0.9em;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals (Copied from index.html) -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-target="aboutModal">&times;</span>
+            <h2>About Us</h2>
+            <div id="aboutModalContent" class="modal-body"></div>
+        </div>
+    </div>
+
+    <div id="contactModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-target="contactModal">&times;</span>
+            <h2>Contact Info</h2>
+            <div id="contactModalContent" class="modal-body"></div>
+        </div>
+    </div>
+    <div class="article-container">
+        <a href="/" class="back-link">← Back to Home</a>
+        <div id="articleContent">
+            <p style="text-align:center;color:var(--text-muted);">Loading article...</p>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <p>Routine of Dhulikhel Banda</p>
+                </div>
+                <div class="footer-links-col">
+                    <h4>Navigate</h4>
+                    <ul id="footerNav"></ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact</h4>
+                    <p>rodb.dhulikhel@gmail.com</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                &copy; 2026 RODB. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'ne',
+                includedLanguages: 'ne,en',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: true
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript"
+        src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script src="/public/site/js/main.js"></script>
+
+    <script>
+        // Inline JS kept only for specific article rendering logic
+        // main.js handles global nav/header/scroll
+
+        const API_BASE_ART = '/api'; // Use var from main.js if possible, but localized here for safety
+
+        function timeAgo(dateString) {
+            const now = new Date();
+            const normalized = typeof dateString === 'string' ? dateString.replace(' ', 'T') : dateString;
+            const date = new Date(normalized);
+            const seconds = Math.floor((now - date) / 1000);
+            if (seconds < 60) return 'just now';
+            const intervals = [
+                { label: 'year', seconds: 31536000 },
+                { label: 'month', seconds: 2592000 },
+                { label: 'day', seconds: 86400 },
+                { label: 'hour', seconds: 3600 },
+                { label: 'minute', seconds: 60 }
+            ];
+            for (const interval of intervals) {
+                const count = Math.floor(seconds / interval.seconds);
+                if (count >= 1) return `${count} ${interval.label}${count > 1 ? 's' : ''} ago`;
+            }
+            return 'just now';
+        }
+
+        function optimizeImageUrl(url, width = 1200) {
+            if (!url) return '';
+            if (url.includes('images.unsplash.com') || url.includes('picsum.photos')) {
+                return url + (url.includes('?') ? '&' : '?') + `w=${width}&q=95&fit=crop`;
+            }
+            return url;
+        }
+
+        (async function renderArticle() {
+            const params = new URLSearchParams(location.search);
+            const slug = params.get('slug');
+            const container = document.getElementById('articleContent');
+            if (!slug) {
+                container.innerHTML = '<p style="color:var(--text-danger)">No article specified.</p>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/articles/slug/${encodeURIComponent(slug)}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    const msg = data && data.error ? data.error : 'Not found';
+                    container.innerHTML = `<p style="color:var(--text-danger)">${msg}</p>`;
+                    return;
+                }
+
+                const article = data.article;
+                if (!article) {
+                    container.innerHTML = '<p style="color:var(--text-danger)">Article not found.</p>';
+                    return;
+                }
+
+                const imgHtml = article.featured_image_url ? `<img src="${optimizeImageUrl(article.featured_image_url, 1200)}" class="article-image" alt="${article.headline}">` : '';
+
+                container.innerHTML = `
+                    <h1 class="article-headline">${article.headline}</h1>
+                    <div class="article-meta">${timeAgo(article.published_at)}${article.author ? ' • ' + article.author : ''}</div>
+                    ${imgHtml}
+                    <div class="article-body">${article.body || ''}</div>
+                `;
+
+            } catch (e) {
+                console.error('Article load error', e);
+                container.innerHTML = '<p style="color:var(--text-danger)">Failed to load article. Please try again later.</p>';
+            }
+        })();
+    </script>
+</body>
+
+</html>

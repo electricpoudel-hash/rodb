@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nepali Language Test - RODB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/public/i18n/i18n.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Mukta', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .language-switcher-demo {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .language-switcher-demo button {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .language-switcher-demo button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .language-switcher-demo button.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .demo-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .demo-section h2 {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .demo-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .demo-item:last-child {
+            border-bottom: none;
+        }
+        .demo-key {
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+        }
+        .demo-value {
+            color: #333;
+            text-align: right;
+            flex: 1;
+            padding-left: 20px;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+        .status {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 data-i18n="common.language">Language Support Test</h1>
+        <p class="subtitle">Nepali (नेपाली) & English Language Switching</p>
+
+        <div class="status">
+            <strong>✓ Status:</strong> Nepali language support is fully integrated and working. Click the language buttons below to test.
+        </div>
+
+        <div class="language-switcher-demo" id="languageSwitcher"></div>
+
+        <!-- Common UI Elements -->
+        <div class="demo-section">
+            <h2 data-i18n="site.categories">Common UI Elements</h2>
+            <div class="demo-item">
+                <span class="demo-key" data-i18n="common.search">Search</span>
+                <span class="demo-value" data-i18n="common.search">Search</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">save</span>
+                <span class="demo-value" data-i18n="common.save">Save</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">delete</span>
+                <span class="demo-value" data-i18n="common.delete">Delete</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">logout</span>
+                <span class="demo-value" data-i18n="common.logout">Logout</span>
+            </div>
+        </div>
+
+        <!-- Site-Specific Translations -->
+        <div class="demo-section">
+            <h2>Site-Specific Translations</h2>
+            <div class="demo-item">
+                <span class="demo-key">welcome</span>
+                <span class="demo-value" data-i18n="site.welcome">Welcome</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">categories</span>
+                <span class="demo-value" data-i18n="site.categories">Categories</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">breaking_news</span>
+                <span class="demo-value" data-i18n="site.breaking_news">Breaking News</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">latest_news</span>
+                <span class="demo-value" data-i18n="site.latest_news">Latest News</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">trending</span>
+                <span class="demo-value" data-i18n="site.trending">Trending</span>
+            </div>
+        </div>
+
+        <!-- Admin Panel Translations -->
+        <div class="demo-section">
+            <h2>Admin Panel Translations</h2>
+            <div class="demo-item">
+                <span class="demo-key">dashboard</span>
+                <span class="demo-value" data-i18n="admin.dashboard">Dashboard</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">articles</span>
+                <span class="demo-value" data-i18n="admin.articles">Articles</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">users</span>
+                <span class="demo-value" data-i18n="admin.users">Users</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">settings</span>
+                <span class="demo-value" data-i18n="admin.settings">Settings</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">analytics</span>
+                <span class="demo-value" data-i18n="admin.analytics">Analytics</span>
+            </div>
+        </div>
+
+        <!-- Error Messages -->
+        <div class="demo-section">
+            <h2>Error Messages</h2>
+            <div class="demo-item">
+                <span class="demo-key">loading_error</span>
+                <span class="demo-value" data-i18n="errors.loading">Failed to load content</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">network_error</span>
+                <span class="demo-value" data-i18n="errors.network">Network error occurred</span>
+            </div>
+            <div class="demo-item">
+                <span class="demo-key">unauthorized</span>
+                <span class="demo-value" data-i18n="errors.unauthorized">Unauthorized access</span>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="demo-section">
+            <h2>✓ Features Implemented</h2>
+            <ul class="feature-list">
+                <li>Automatic language detection from browser settings</li>
+                <li>Language preference saved to localStorage</li>
+                <li>Instant translation switching without page reload</li>
+                <li>Support for Devanagari script (नेपाली)</li>
+                <li>Compatible fonts already loaded (Mukta)</li>
+                <li>Works on desktop and mobile devices</li>
+                <li>Non-breaking - all functionality preserved</li>
+                <li>Easy to extend with new translations</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Language Support Test Page | RODB Project</p>
+            <p>Visit <strong>/admin</strong> and <strong>/</strong> to see language switching in the actual panels</p>
+            <p style="margin-top: 10px; font-size: 11px; color: #999;">
+                Translation files: /server/public/i18n/ne.json (Nepali) & en.json (English)
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize language switcher after i18n is ready
+        setTimeout(() => {
+            if (typeof i18n !== 'undefined') {
+                i18n.createLanguageSwitcher();
+            }
+        }, 500);
+    </script>
+</body>
+</html>

@@ -10,16 +10,17 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
         rel="stylesheet">
+    <script src="/public/utils/bikram-sambat.js"></script>
+</head>
+
     <style>
         .goog-te-banner-frame {
             display: none !important;
         }
-
         .goog-te-gadget-simple {
             background-color: transparent !important;
             border: none !important;
         }
-
         body {
             top: 0 !important;
         }
@@ -30,10 +31,8 @@
 
     <div class="top-bar">
         <div class="container">
-            <div class="date-display" id="dateDisplay"></div>
             <div class="top-actions">
                 <div id="google_translate_element"></div>
-                <button id="themeToggle" class="theme-btn">Dark Mode</button>
             </div>
         </div>
     </div>
@@ -41,50 +40,97 @@
     <header class="main-header">
         <div class="container header-grid">
             <div class="logo-area">
-                <button class="menu-toggle" onclick="toggleMenu()">☰</button>
-                <a href="/" class="logo-link">
+                <button class="menu-toggle" id="menuToggleBtn" onclick="toggleMenu()">☰</button>
+                <a href="/" class="logo-link"
+                    style="display: flex; align-items: center; gap: 15px; text-decoration: none;">
                     <img src="/public/fablo/logo.png" alt="RODB" class="logo-img">
                     <div class="logo-text">
-                        <h1>RODB</h1>
+                        <h1 style="margin: 0; font-size: 1.4em; color: var(--primary);">Routine of Dhulikhel Banda</h1>
                     </div>
                 </a>
             </div>
             <div class="header-ad" id="ad_header"></div>
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-btn">🌙</button>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search news...">
+                    <button id="searchBtn"
+                        style="background: var(--primary); color: white; border: none; padding: 5px 10px; border-radius: 0 5px 5px 0; cursor: pointer;">Search</button>
+                </div>
+
+                <!-- Removed duplicate google_translate_element -->
+            </div>
         </div>
     </header>
 
-    <nav class="main-nav" id="mainNav">
+    <nav class="top-navigation" id="topNav">
         <div class="container">
-            <ul class="nav-links" id="dynamicNav"></ul>
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search...">
-            </div>
+            <ul id="topNavList" style="list-style: none; padding: 0; margin: 0; display: flex; gap: 30px;">
+                <!-- Loaded from API -->
+            </ul>
         </div>
     </nav>
 
-    <div class="mobile-menu" id="mobileMenu">
-        <ul id="mobileNavList"></ul>
-    </div>
-
     <div class="ticker-wrap" id="newsTicker">
         <div class="container">
-            <div class="ticker-label">Updates</div>
-            <div class="ticker-content">
-                <div class="ticker-items" id="tickerItems"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="ticker-label" id="tickerDate"></div>
+                <div class="ticker-content" style="flex: 1;">
+                    <div class="ticker-items" id="tickerItems"></div>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <!-- Search Section -->
+        <div class="mobile-menu-section mobile-search-section">
+            <div class="mobile-search-box">
+                <input type="text" id="mobileSearchInput" placeholder="Search news..." class="mobile-search-input">
+                <button id="mobileSearchBtn" class="mobile-search-btn">Search</button>
+            </div>
+        </div>
+
+        <!-- Theme Toggle -->
+        <div class="mobile-menu-section">
+            <button id="mobileThemeToggle" class="mobile-theme-btn">🌙 Toggle Theme</button>
+        </div>
+
+        <!-- Navigation Menu -->
+        <div class="mobile-menu-section">
+            <h3 class="mobile-menu-title">Navigation</h3>
+            <ul id="mobileNavList" class="mobile-menu-list"></ul>
+        </div>
+
+        <!-- Categories -->
+        <div class="mobile-menu-section">
+            <h3 class="mobile-menu-title">Categories</h3>
+            <ul id="mobileCatList" class="mobile-menu-list"></ul>
+        </div>
+
+        <!-- About -->
+        <div class="mobile-menu-section">
+            <h3 class="mobile-menu-title">About Us</h3>
+            <p id="mobileAbout" class="mobile-menu-text"></p>
+        </div>
+
+        <!-- Contact -->
+        <div class="mobile-menu-section">
+            <h3 class="mobile-menu-title">Contact Info</h3>
+            <p id="mobileContact" class="mobile-menu-text"></p>
         </div>
     </div>
 
     <main class="main-container container">
         <div class="news-grid-layout">
 
-            <!-- Left Column: Featured Headlines -->
+            <!-- Left Column: News Feed (Old Right) -->
             <aside class="col-left">
                 <div class="section-title">
                     <h3>News Feed</h3>
                 </div>
-                <div id="leftHeadlines" class="headline-list">
-                    <!-- Headliness + Links -->
+                <div id="leftNewsFeed" class="headline-list">
+                    <!-- News Feed items load here -->
                 </div>
                 <div class="ad-slot" id="ad_left"></div>
             </aside>
@@ -97,9 +143,14 @@
                 <button id="loadMore" class="load-more">Load More</button>
             </div>
 
-            <!-- Right Column: Hot News -->
+            <!-- Right Column: Trending News (Numbered List) -->
             <aside class="col-right">
-                <div class="section-title">
+                <div class="trending-widget">
+                    <h3>Trending News</h3>
+                    <div id="trendingList"></div>
+                </div>
+
+                <div class="section-title" style="margin-top:24px;">
                     <h3>Hot News</h3>
                 </div>
                 <div class="hot-news-wrapper">
@@ -108,21 +159,61 @@
                     </ul>
                 </div>
                 <div class="ad-slot" id="ad_right"></div>
-
-                <div class="trending-widget">
-                    <h3>Trending</h3>
-                    <div id="trendingList"></div>
-                </div>
             </aside>
 
         </div>
+
+        <!-- Mobile Layout Section -->
+        <div class="mobile-layout" style="display: none;">
+            <!-- Top 2 Articles -->
+            <div class="mobile-top-articles" id="mobileTopArticles">
+                <!-- Top 2 articles will be inserted here -->
+            </div>
+
+            <!-- Trending Section -->
+            <div class="trending-section">
+                <div class="section-title">
+                    <h3>Trending News</h3>
+                </div>
+                <div class="trending-cards" id="mobileTrendingCards">
+                    <!-- Trending articles with summaries will be inserted here -->
+                </div>
+            </div>
+
+            <!-- News Feed Section -->
+            <div class="news-feed-section">
+                <div class="section-title">
+                    <h3>News Feed</h3>
+                </div>
+                <div id="mobileNewsFeed" class="mobile-feed-cards">
+                    <!-- News feed cards will be inserted here -->
+                </div>
+                <button id="loadMoreMobile" class="load-more">Load More</button>
+            </div>
+        </div>
     </main>
+
+    <!-- Modals -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-target="aboutModal">&times;</span>
+            <h2>About Us</h2>
+            <div id="aboutModalContent" class="modal-body"></div>
+        </div>
+    </div>
+
+    <div id="contactModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" data-target="contactModal">&times;</span>
+            <h2>Contact Info</h2>
+            <div id="contactModalContent" class="modal-body"></div>
+        </div>
+    </div>
 
     <footer class="main-footer">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-brand">
-                    <img src="/public/fablo/logo-dark.png" alt="RODB Logo">
                     <p>Routine of Dhulikhel Banda</p>
                 </div>
                 <div class="footer-links-col">

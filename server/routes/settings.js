@@ -19,7 +19,7 @@ router.get('/public', async (req, res) => {
     try {
         const settings = await database.all(
             `SELECT key, value, type FROM settings 
-       WHERE key IN ('org_name', 'org_short_name', 'org_email', 'site_title', 'site_description', 'ticker_enabled', 'ticker_text', 'nav_items')`
+       WHERE key IN ('org_name', 'org_short_name', 'org_email', 'site_title', 'site_description', 'ticker_enabled', 'ticker_text', 'nav_items', 'trending_articles', 'hot_news', 'about_content', 'contact_content', 'about_info', 'contact_info')`
         );
         res.json({ settings });
     } catch (error) {

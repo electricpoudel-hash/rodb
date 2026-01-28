@@ -7,6 +7,7 @@ const logger = require('./utils/logger');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const { router: adminAuthRoutes } = require('./routes/admin-auth');
 const articleRoutes = require('./routes/articles');
 const categoryRoutes = require('./routes/categories');
 const tagRoutes = require('./routes/tags');
@@ -18,6 +19,7 @@ const analyticsRoutes = require('./routes/analytics');
 const searchRoutes = require('./routes/search');
 const settingsRoutes = require('./routes/settings');
 const healthRoutes = require('./routes/health');
+const adsRoutes = require('./routes/ads');
 
 const app = express();
 
@@ -44,6 +46,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/tags', tagRoutes);
@@ -55,10 +58,16 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/ads', adsRoutes);
+app.use('/api/navigation', require('./routes/navigation'));
 
 // Serve frontend
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/site/index.html'));
+});
+
+app.get('/article.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/site/article.html'));
 });
 
 app.get('/admin', (req, res) => {

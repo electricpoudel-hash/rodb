@@ -4,6 +4,16 @@ const database = require('../config/database');
 const { authenticate, requirePermission } = require('../middlewares/auth');
 const logger = require('../utils/logger');
 
+// Admin: Get all ads (must be before /:id route)
+router.get('/all', authenticate, requirePermission('ads.manage'), async (req, res) => {
+    try {
+        const ads = await database.all('SELECT * FROM advertisements ORDER BY created_at DESC');
+        res.json({ ads });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get all active ads (public)
 router.get('/', async (req, res) => {
     try {
@@ -41,26 +51,17 @@ router.post('/:id/click', async (req, res) => {
     }
 });
 
-// Admin: Get all ads
-router.get('/all', authenticate, requirePermission('ads.manage'), async (req, res) => {
-    try {
-        const ads = await database.all('SELECT * FROM advertisements ORDER BY created_at DESC');
-        res.json({ ads });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Admin: Create ad
 router.post('/', authenticate, requirePermission('ads.manage'), async (req, res) => {
     try {
-        const { title, image_url, link_url, placement, width, height, start_date, end_date } = req.body;
+        const { name, image_url, link_url, placement, width, height, start_date, end_date, ad_type } = req.body;
+        const type = ad_type || (image_url ? 'image' : 'html');
         const result = await database.run(
-            `INSERT INTO advertisements (title, image_url, link_url, placement, width, height, start_date, end_date) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [title, image_url, link_url, placement, width, height, start_date || null, end_date || null]
+            `INSERT INTO advertisements (name, ad_type, image_url, link_url, placement, width, height, start_date, end_date) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [name, type, image_url, link_url, placement, width, height, start_date || null, end_date || null]
         );
-        logger.audit('ad_create', req.user.id, { id: result.lastID, title });
+        logger.audit('ad_create', req.user.id, { id: result.lastID, name });
         res.status(201).json({ id: result.lastID, message: 'Ad created' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -70,15 +71,16 @@ router.post('/', authenticate, requirePermission('ads.manage'), async (req, res)
 // Admin: Update ad
 router.put('/:id', authenticate, requirePermission('ads.manage'), async (req, res) => {
     try {
-        const { title, image_url, link_url, placement, width, height, is_active, start_date, end_date } = req.body;
+        const { name, image_url, link_url, placement, width, height, is_active, start_date, end_date, ad_type } = req.body;
+        const type = ad_type || (image_url ? 'image' : 'html');
         await database.run(
             `UPDATE advertisements SET 
-       title = ?, image_url = ?, link_url = ?, placement = ?, 
+       name = ?, ad_type = ?, image_url = ?, link_url = ?, placement = ?, 
        width = ?, height = ?, is_active = ?, start_date = ?, end_date = ? 
        WHERE id = ?`,
-            [title, image_url, link_url, placement, width, height, is_active ? 1 : 0, start_date, end_date, req.params.id]
+            [name, type, image_url, link_url, placement, width, height, is_active ? 1 : 0, start_date, end_date, req.params.id]
         );
-        logger.audit('ad_update', req.user.id, { id: req.params.id, title });
+        logger.audit('ad_update', req.user.id, { id: req.params.id, name });
         res.json({ message: 'Ad updated' });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Test</title>
+</head>
+<body>
+    <h1>Image Test - Base64</h1>
+    
+    <h2>Test 1: Simple base64 PNG (1x1 red pixel)</h2>
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==" alt="Red pixel" style="border: 1px solid black; width: 100px; height: 100px;">
+    <p>If you see a red square above, base64 data URLs work in your browser.</p>
+    
+    <h2>Test 2: Testing upload endpoint</h2>
+    <form id="uploadForm">
+        <input type="file" id="imageInput" accept="image/*">
+        <button type="submit">Upload Image</button>
+    </form>
+    <div id="result"></div>
+    
+    <script>
+        const form = document.getElementById('uploadForm');
+        const result = document.getElementById('result');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const file = document.getElementById('imageInput').files[0];
+            if (!file) {
+                result.textContent = 'No file selected';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const base64Data = event.target.result;
+                
+                try {
+                    result.textContent = 'Uploading...';
+                    const response = await fetch('/api/media/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || 'test')
+                        },
+                        body: JSON.stringify({
+                            base64Data,
+                            filename: file.name
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (response.ok) {
+                        result.innerHTML = `<p style="color: green;">✓ Upload successful! URL: <code>${data.url}</code></p>
+                        <img src="${data.url}" style="max-width: 200px; border: 1px solid #ccc; margin-top: 10px;">`;
+                    } else {
+                        result.innerHTML = `<p style="color: red;">✗ Upload failed: ${data.error}</p>`;
+                    }
+                } catch (error) {
+                    result.innerHTML = `<p style="color: red;">✗ Error: ${error.message}</p>`;
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>

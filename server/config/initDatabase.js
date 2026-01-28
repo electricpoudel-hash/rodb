@@ -73,6 +73,9 @@ async function seedDefaultData() {
         // Category permissions
         { name: 'category.manage', resource: 'category', action: 'manage', description: 'Manage categories' },
 
+        // Ads permissions
+        { name: 'ads.manage', resource: 'ads', action: 'manage', description: 'Manage advertisements' },
+
         // Media permissions
         { name: 'media.upload', resource: 'media', action: 'upload', description: 'Upload media' },
         { name: 'media.manage', resource: 'media', action: 'manage', description: 'Manage media library' },

@@ -6,8 +6,10 @@ const { createLimiter } = require('../middlewares/rateLimiter');
 
 // Public routes
 router.get('/', optionalAuth, ArticleController.getAll);
-router.get('/:id', optionalAuth, ArticleController.getOne);
+// Route for slug must come before the parameterized id route so URLs like
+// "/slug/some-slug" don't get captured by ":id".
 router.get('/slug/:slug', optionalAuth, ArticleController.getBySlug);
+router.get('/:id', optionalAuth, ArticleController.getOne);
 
 // Protected routes
 router.post('/', authenticate, requirePermission('article.create'), createLimiter, ArticleController.create);
