@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     buildCommand: npm install
-    startCommand: node server/app.js
+    startCommand: node server/server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -14,14 +14,7 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: DB_PATH
-        value: ./server/data/rodb.db
-      - key: JWT_SECRET
-        scope: SECRET
-      - key: JWT_REFRESH_SECRET
-        scope: SECRET
-      - key: ADMIN_SECRET
-        scope: SECRET
-      - key: ADMIN_ID
+        value: /tmp/rodb.db
         scope: SECRET
       - key: ADMIN_PASSWORD
         scope: SECRET

@@ -53,6 +53,9 @@ class Database {
     // Helper method to run queries
     run(sql, params = []) {
         return new Promise((resolve, reject) => {
+            if (!this.db) {
+                return reject(new Error('Database not initialized'));
+            }
             this.db.run(sql, params, function (err) {
                 if (err) {
                     logger.error('Database run error:', { sql, params, error: err.message });
@@ -67,6 +70,9 @@ class Database {
     // Helper method to get single row
     get(sql, params = []) {
         return new Promise((resolve, reject) => {
+            if (!this.db) {
+                return reject(new Error('Database not initialized'));
+            }
             this.db.get(sql, params, (err, row) => {
                 if (err) {
                     logger.error('Database get error:', { sql, params, error: err.message });
@@ -81,6 +87,9 @@ class Database {
     // Helper method to get all rows
     all(sql, params = []) {
         return new Promise((resolve, reject) => {
+            if (!this.db) {
+                return reject(new Error('Database not initialized'));
+            }
             this.db.all(sql, params, (err, rows) => {
                 if (err) {
                     logger.error('Database all error:', { sql, params, error: err.message });
