@@ -37,11 +37,11 @@ router.post('/upload', authenticate, async (req, res) => {
         // Convert base64 to buffer
         const buffer = Buffer.from(base64, 'base64');
 
-        // Process image with Sharp for compression only - no resizing to preserve aspect ratio
+        // Process image with Sharp for minimal compression - preserve HD quality
         try {
             await sharp(buffer)
                 .jpeg({
-                    quality: 92,
+                    quality: 95,
                     progressive: true,
                     mozjpeg: true
                 })

@@ -70,6 +70,10 @@ app.get('/article.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/site/article.html'));
 });
 
+app.get('/category/:slug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/site/index.html'));
+});
+
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/admin/index.html'));
 });

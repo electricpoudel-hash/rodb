@@ -49,9 +49,8 @@
                     </div>
                 </a>
             </div>
-            <div class="header-ad" id="ad_header"></div>
             <div class="header-actions">
-                <button id="themeToggle" class="theme-btn">🌙</button>
+                <button id="themeToggle" class="theme-btn desktop-theme-btn">🌙</button>
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="Search news...">
                     <button id="searchBtn"
@@ -62,6 +61,13 @@
             </div>
         </div>
     </header>
+
+    <!-- Header Ad Banner (Desktop) -->
+    <div class="header-ad-wrapper" id="headerAdWrapper">
+        <div class="container">
+            <div class="header-ad" id="ad_header"></div>
+        </div>
+    </div>
 
     <nav class="top-navigation" id="topNav">
         <div class="container">
@@ -145,6 +151,8 @@
 
             <!-- Right Column: Trending News (Numbered List) -->
             <aside class="col-right">
+                <div class="ad-slot" id="ad_right_before_trending"></div>
+
                 <div class="trending-widget">
                     <h3>Trending News</h3>
                     <div id="trendingList"></div>
@@ -170,6 +178,11 @@
                 <!-- Top 2 articles will be inserted here -->
             </div>
 
+            <!-- Ad Before Trending -->
+            <div id="mobile-ad-before-trending" class="mobile-ad-container" style="margin: 20px 0; padding: 8px; text-align: center; min-height: 280px; background: var(--bg-body); display: flex; align-items: center; justify-content: center; border-radius: 6px;">
+                <span style="color: var(--text-muted); font-size: 0.8em;">Advertisement</span>
+            </div>
+
             <!-- Trending Section -->
             <div class="trending-section">
                 <div class="section-title">
@@ -178,6 +191,16 @@
                 <div class="trending-cards" id="mobileTrendingCards">
                     <!-- Trending articles with summaries will be inserted here -->
                 </div>
+            </div>
+
+            <!-- Hot News Section -->
+            <div id="mobileHotNews" class="hot-news-section">
+                <!-- Hot news will be inserted here -->
+            </div>
+
+            <!-- Ad After Hot News -->
+            <div id="mobile-ad-after-hotnews" class="mobile-ad-container" style="margin: 20px 0; padding: 8px; text-align: center; min-height: 280px; background: var(--bg-body); display: flex; align-items: center; justify-content: center; border-radius: 6px;">
+                <span style="color: var(--text-muted); font-size: 0.8em;">Advertisement</span>
             </div>
 
             <!-- News Feed Section -->

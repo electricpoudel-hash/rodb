@@ -23,18 +23,18 @@
 
         .article-meta {
             color: var(--text-muted);
-            margin-bottom: 16px
+            margin-bottom: 16px;
+            font-size: 0.9em;
         }
 
         .article-image {
-            width: 120px;
-            height: 150px;
+            width: 100%;
+            max-width: 500px;
+            height: auto;
             object-fit: cover;
             border-radius: 6px;
-            margin-bottom: 16px;
-            display: inline-block;
-            margin-right: 16px;
-            float: left;
+            margin-bottom: 20px;
+            display: block;
         }
 
         .back-link {
@@ -48,12 +48,13 @@
             line-height: 1.8;
             font-size: 1rem;
             overflow: auto;
+            clear: both;
         }
         
         .article-body img {
             max-width: 100%;
             height: auto;
-            margin: 10px 10px 10px 0;
+            margin: 10px 0;
         }
 
         /* Fix body padding as main.css adds padding-top */
@@ -138,9 +139,9 @@
         </div>
     </div>
     <div class="article-container">
-        <a href="/" class="back-link">← Back to Home</a>
+        <a href="/" class="back-link">← गृहपृष्ठमा फर्कनुहोस्</a>
         <div id="articleContent">
-            <p style="text-align:center;color:var(--text-muted);">Loading article...</p>
+            <p style="text-align:center;color:var(--text-muted);">लेख लोड हो रहेको छ...</p>
         </div>
     </div>
 
@@ -185,24 +186,48 @@
 
         const API_BASE_ART = '/api'; // Use var from main.js if possible, but localized here for safety
 
-        function timeAgo(dateString) {
+        // Nepali month and time labels
+        const nepaliLabels = {
+            justNow: 'भर्खर',
+            minute: 'मिनेट',
+            hour: 'घण्टा',
+            day: 'दिन',
+            month: 'महिना',
+            year: 'वर्ष',
+            ago: 'अगाडि'
+        };
+
+        function timeAgo(dateString, createdDateString) {
+            // If dateString (published_at) is missing or from 1970 (Unix epoch start), try created_at
+            let date = new Date(dateString);
             const now = new Date();
-            const normalized = typeof dateString === 'string' ? dateString.replace(' ', 'T') : dateString;
-            const date = new Date(normalized);
+
+            // Check if date is invalid or evidently default Unix epoch (often 1970-01-01 when null/0)
+            if (!dateString || isNaN(date.getTime()) || date.getFullYear() === 1970) {
+                if (createdDateString) {
+                    date = new Date(createdDateString);
+                } else {
+                    return nepaliLabels.justNow;
+                }
+            }
+
             const seconds = Math.floor((now - date) / 1000);
-            if (seconds < 60) return 'just now';
+            
+            if (seconds < 60) return `${nepaliLabels.justNow}`;
+            
             const intervals = [
-                { label: 'year', seconds: 31536000 },
-                { label: 'month', seconds: 2592000 },
-                { label: 'day', seconds: 86400 },
-                { label: 'hour', seconds: 3600 },
-                { label: 'minute', seconds: 60 }
+                { label: nepaliLabels.year, seconds: 31536000 },
+                { label: nepaliLabels.month, seconds: 2592000 },
+                { label: nepaliLabels.day, seconds: 86400 },
+                { label: nepaliLabels.hour, seconds: 3600 },
+                { label: nepaliLabels.minute, seconds: 60 }
             ];
+            
             for (const interval of intervals) {
                 const count = Math.floor(seconds / interval.seconds);
-                if (count >= 1) return `${count} ${interval.label}${count > 1 ? 's' : ''} ago`;
+                if (count >= 1) return `${count} ${interval.label} ${nepaliLabels.ago}`;
             }
-            return 'just now';
+            return `${nepaliLabels.justNow}`;
         }
 
         function optimizeImageUrl(url, width = 1200) {
@@ -218,7 +243,7 @@
             const slug = params.get('slug');
             const container = document.getElementById('articleContent');
             if (!slug) {
-                container.innerHTML = '<p style="color:var(--text-danger)">No article specified.</p>';
+                container.innerHTML = '<p style="color:var(--text-danger)">कुनै लेख निर्दिष्ट गरिएको छैन।</p>';
                 return;
             }
 
@@ -227,14 +252,14 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    const msg = data && data.error ? data.error : 'Not found';
+                    const msg = data && data.error ? data.error : 'फेला परेन';
                     container.innerHTML = `<p style="color:var(--text-danger)">${msg}</p>`;
                     return;
                 }
 
                 const article = data.article;
                 if (!article) {
-                    container.innerHTML = '<p style="color:var(--text-danger)">Article not found.</p>';
+                    container.innerHTML = '<p style="color:var(--text-danger)">लेख फेला परेन।</p>';
                     return;
                 }
 
@@ -242,14 +267,14 @@
 
                 container.innerHTML = `
                     <h1 class="article-headline">${article.headline}</h1>
-                    <div class="article-meta">${timeAgo(article.published_at)}${article.author ? ' • ' + article.author : ''}</div>
+                    <div class="article-meta">${timeAgo(article.published_at, article.created_at)}${article.author ? ' • ' + article.author : ''}</div>
                     ${imgHtml}
                     <div class="article-body">${article.body || ''}</div>
                 `;
 
             } catch (e) {
                 console.error('Article load error', e);
-                container.innerHTML = '<p style="color:var(--text-danger)">Failed to load article. Please try again later.</p>';
+                container.innerHTML = '<p style="color:var(--text-danger)">लेख लोड गर्न असफल। कृपया पछि प्रयास गर्नुहोस्।</p>';
             }
         })();
     </script>

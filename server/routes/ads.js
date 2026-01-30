@@ -3,6 +3,14 @@ const router = express.Router();
 const database = require('../config/database');
 const { authenticate, requirePermission } = require('../middlewares/auth');
 const logger = require('../utils/logger');
+const fs = require('fs');
+const path = require('path');
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Admin: Get all ads (must be before /:id route)
 router.get('/all', authenticate, requirePermission('ads.manage'), async (req, res) => {
@@ -27,6 +35,38 @@ router.get('/', async (req, res) => {
         );
         res.json({ ads }); // Simplified logic, real-world would group by placement
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Upload ad image/video
+router.post('/upload', authenticate, requirePermission('ads.manage'), async (req, res) => {
+    try {
+        const { base64Data, filename } = req.body;
+
+        if (!base64Data || !filename) {
+            return res.status(400).json({ error: 'base64Data and filename are required' });
+        }
+
+        // Remove data URL prefix if present
+        const base64 = base64Data.replace(/^data:[^;]+;base64,/, '');
+
+        // Generate unique filename - preserve extension
+        const timestamp = Date.now();
+        const ext = path.extname(filename);
+        const baseName = path.basename(filename, ext).replace(/[^a-zA-Z0-9.-]/g, '_');
+        const uniqueFilename = `${timestamp}-${baseName}${ext}`;
+        const filePath = path.join(uploadsDir, uniqueFilename);
+
+        // Convert base64 to buffer and save
+        const buffer = Buffer.from(base64, 'base64');
+        fs.writeFileSync(filePath, buffer);
+
+        // Return URL
+        const imageUrl = `/uploads/${uniqueFilename}`;
+        res.json({ image_url: imageUrl, filename: uniqueFilename });
+    } catch (error) {
+        console.error('Ad upload error:', error);
         res.status(500).json({ error: error.message });
     }
 });

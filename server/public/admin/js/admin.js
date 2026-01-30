@@ -223,6 +223,7 @@ function showSection(sectionName) {
             break;
         case 'ads':
             loadAds();
+            setupAdPreview();
             break;
     }
 }
@@ -329,24 +330,127 @@ async function loadAds() {
 function showAddAdForm() { document.getElementById('addAdForm').style.display = 'block'; }
 function hideAddAdForm() { document.getElementById('addAdForm').style.display = 'none'; }
 
+// Preview image/video when file is selected or URL is pasted
+function setupAdPreview() {
+    const fileInput = document.getElementById('ad_image_file');
+    const urlInput = document.getElementById('ad_image_url');
+    const preview = document.getElementById('ad_preview');
+    const videoPreview = document.getElementById('ad_video_preview');
+
+    // File upload preview
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const src = event.target.result;
+                    const isVideo = file.type.includes('video');
+                    
+                    if (isVideo) {
+                        videoPreview.src = src;
+                        videoPreview.style.display = 'block';
+                        preview.style.display = 'none';
+                    } else {
+                        preview.src = src;
+                        preview.style.display = 'block';
+                        videoPreview.style.display = 'none';
+                    }
+                    urlInput.value = ''; // Clear URL input when file is selected
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // URL input preview
+    if (urlInput) {
+        urlInput.addEventListener('change', function(e) {
+            const url = e.target.value;
+            if (url) {
+                if (url.endsWith('.mp4') || url.endsWith('.webm')) {
+                    videoPreview.src = url;
+                    videoPreview.style.display = 'block';
+                    preview.style.display = 'none';
+                } else {
+                    preview.src = url;
+                    preview.style.display = 'block';
+                    videoPreview.style.display = 'none';
+                }
+                fileInput.value = ''; // Clear file input when URL is pasted
+            }
+        });
+    }
+}
+
 async function createAd() {
     const title = document.getElementById('ad_title').value;
-    const image_url = document.getElementById('ad_image').value;
+    const fileInput = document.getElementById('ad_image_file');
+    const urlInput = document.getElementById('ad_image_url');
     const link_url = document.getElementById('ad_link').value;
     const placement = document.getElementById('ad_placement').value;
     const start_date = document.getElementById('ad_start').value;
     const end_date = document.getElementById('ad_end').value;
 
-    if (!title || !image_url || !link_url) {
-        showWarning('Title, Image URL, and Link URL are required');
+    if (!title || !link_url) {
+        showWarning('Title and Link URL are required');
         return;
     }
 
+    let image_url = '';
+
+    // Check if file is selected
+    if (fileInput && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = async function(event) {
+            const base64Data = event.target.result;
+            
+            try {
+                const uploadResponse = await fetch(`${API_BASE}/ads/upload`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}` 
+                    },
+                    body: JSON.stringify({
+                        base64Data: base64Data,
+                        filename: file.name
+                    })
+                });
+
+                if (uploadResponse.ok) {
+                    const uploadData = await uploadResponse.json();
+                    image_url = uploadData.image_url;
+                    
+                    // Now create the ad with the uploaded image
+                    await createAdWithImage(title, image_url, link_url, placement, start_date, end_date);
+                } else {
+                    showError('Error uploading image');
+                }
+            } catch (error) {
+                showError('Error uploading file: ' + error.message);
+            }
+        };
+        
+        reader.readAsDataURL(file);
+    } else if (urlInput && urlInput.value) {
+        // Use URL if no file is selected
+        image_url = urlInput.value;
+        createAdWithImage(title, image_url, link_url, placement, start_date, end_date);
+    } else {
+        showWarning('Please upload an image/video or paste a URL');
+    }
+}
+
+async function createAdWithImage(title, image_url, link_url, placement, start_date, end_date) {
     // Map ad sizes to dimensions
     const adSizes = {
         'header': { width: 728, height: 90 },
         'content_top': { width: 336, height: 280 },
-        'content_bottom': { width: 300, height: 250 }
+        'content_bottom': { width: 300, height: 250 },
+        'mobile_sticky': { width: 320, height: 50 }
     };
 
     const size = adSizes[placement] || { width: 300, height: 250 };
@@ -370,6 +474,14 @@ async function createAd() {
         if (response.ok) {
             showSuccess('Ad created successfully!');
             hideAddAdForm();
+            document.getElementById('ad_title').value = '';
+            document.getElementById('ad_image_file').value = '';
+            document.getElementById('ad_image_url').value = '';
+            document.getElementById('ad_link').value = '';
+            document.getElementById('ad_start').value = '';
+            document.getElementById('ad_end').value = '';
+            document.getElementById('ad_preview').style.display = 'none';
+            document.getElementById('ad_video_preview').style.display = 'none';
             loadAds();
         } else {
             const error = await response.json();
